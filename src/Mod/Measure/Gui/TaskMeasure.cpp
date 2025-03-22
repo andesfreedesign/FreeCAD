@@ -72,7 +72,7 @@ TaskMeasure::TaskMeasure()
 
     QSettings settings;
     settings.beginGroup(QLatin1String(taskMeasureSettingsGroup));
-    delta = settings.value(QLatin1String(taskMeasureShowDeltaSettingsName), delta).toBool();
+    delta = settings.value(QLatin1String(taskMeasureShowDeltaSettingsName), true).toBool();
     mAutoSave = settings.value(QLatin1String(taskMeasureAutoSaveSettingsName), mAutoSave).toBool();
     if (settings.value(QLatin1String(taskMeasureGreedySelection), false).toBool()) {
         Gui::Selection().setSelectionStyle(SelectionStyle::GreedySelection);
@@ -80,6 +80,7 @@ TaskMeasure::TaskMeasure()
     else {
         Gui::Selection().setSelectionStyle(SelectionStyle::NormalSelection);
     }
+    settings.endGroup();
 
     showDelta = new QCheckBox();
     showDelta->setChecked(delta);
@@ -119,7 +120,7 @@ TaskMeasure::TaskMeasure()
 
     // Create mode dropdown and add all registered measuretypes
     modeSwitch = new QComboBox();
-    modeSwitch->addItem(QString::fromLatin1("Auto"));
+    modeSwitch->addItem(QStringLiteral("Auto"));
 
     for (App::MeasureType* mType : App::MeasureManager::getMeasureTypes()) {
         modeSwitch->addItem(QString::fromLatin1(mType->label.c_str()));
@@ -147,7 +148,7 @@ TaskMeasure::TaskMeasure()
     auto* settingsLayout = new QHBoxLayout();
     settingsLayout->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding));
     settingsLayout->addWidget(mSettings);
-    formLayout->addRow(QStringLiteral(), settingsLayout);
+    formLayout->addRow(QStringLiteral(""), settingsLayout);
     formLayout->addRow(tr("Mode:"), modeSwitch);
     formLayout->addRow(showDeltaLabel, showDelta);
     formLayout->addRow(tr("Result:"), valueResult);
@@ -219,13 +220,12 @@ Measure::MeasureBase* TaskMeasure::createObject(const App::MeasureType* measureT
         auto pyMeasureClass = measureType->pythonClass;
 
         // Create a MeasurePython instance
-        auto featurePython = doc->addObject("Measure::MeasurePython", measureType->label.c_str());
-        _mMeasureObject = dynamic_cast<Measure::MeasureBase*>(featurePython);
+        _mMeasureObject = doc->addObject<Measure::MeasurePython>(measureType->label.c_str());
 
         // Create an instance of the pyMeasureClass, the classe's initializer sets the object as
         // proxy
         Py::Tuple args(1);
-        args.setItem(0, Py::asObject(featurePython->getPyObject()));
+        args.setItem(0, Py::asObject(_mMeasureObject->getPyObject()));
         PyObject* result = PyObject_CallObject(pyMeasureClass, args.ptr());
         Py_XDECREF(result);
     }
@@ -249,8 +249,7 @@ void TaskMeasure::update()
         App::DocumentObject* sub = ob->getSubObject(sel.SubName);
 
         // Resolve App::Link
-        if (sub->isDerivedFrom<App::Link>()) {
-            auto link = static_cast<App::Link*>(sub);
+        if (auto link = Base::freecad_dynamic_cast<App::Link>(sub)) {
             sub = link->getLinkedObject(true);
         }
 
@@ -341,7 +340,7 @@ void TaskMeasure::initViewObject()
     dynamic_cast<MeasureGui::ViewProviderMeasureBase*>(viewObject)->positionAnno(_mMeasureObject);
 
     // Set the ShowDelta Property if it exists on the measurements view object
-    auto* prop = dynamic_cast<App::PropertyBool*>(viewObject->getPropertyByName("ShowDelta"));
+    auto* prop = viewObject->getPropertyByName<App::PropertyBool>("ShowDelta");
     setDeltaPossible(prop != nullptr);
     if (prop) {
         prop->setValue(showDelta->isChecked());
@@ -369,12 +368,10 @@ void TaskMeasure::ensureGroup(Measure::MeasureBase* measurement)
     App::DocumentObject* obj = doc->getObject(measurementGroupName);
 
 
-    if (!obj || !obj->isValid()
-        || !obj->isDerivedFrom(App::DocumentObjectGroup::getClassTypeId())) {
-        obj = doc->addObject("App::DocumentObjectGroup",
-                             measurementGroupName,
-                             true,
-                             "MeasureGui::ViewProviderMeasureGroup");
+    if (!obj || !obj->isValid() || !obj->isDerivedFrom<App::DocumentObjectGroup>()) {
+        obj = doc->addObject<App::DocumentObjectGroup>(measurementGroupName,
+                                                       true,
+                                                       "MeasureGui::ViewProviderMeasureGroup");
     }
 
     auto group = static_cast<App::DocumentObjectGroup*>(obj);
@@ -466,11 +463,11 @@ void TaskMeasure::onSelectionChanged(const Gui::SelectionChanges& msg)
     // If the control modifier is pressed, the object is just added to the current measurement
     // If the control modifier is not pressed, a new measurement will be started. If autosave is on,
     // the old measurement will be saved otherwise discharded. Shift inverts the autosave behaviour
-    // temporarly
+    // temporarily
     const auto modifier = QGuiApplication::keyboardModifiers();
     const bool ctrl = (modifier & Qt::ControlModifier) > 0;
     const bool shift = (modifier & Qt::ShiftModifier) > 0;
-    // shift inverts the current state temporarly
+    // shift inverts the current state temporarily
     const auto autosave = (mAutoSave && !shift) || (!mAutoSave && shift);
     if ((!ctrl && Selection().getSelectionStyle() == SelectionStyle::NormalSelection)
         || (ctrl && Selection().getSelectionStyle() == SelectionStyle::GreedySelection)) {
@@ -530,6 +527,8 @@ void TaskMeasure::showDeltaChanged(int checkState)
     QSettings settings;
     settings.beginGroup(QLatin1String(taskMeasureSettingsGroup));
     settings.setValue(QLatin1String(taskMeasureShowDeltaSettingsName), delta);
+    settings.endGroup();
+    settings.sync();  // immediate write to the settings file
 
     this->update();
 }
@@ -541,6 +540,7 @@ void TaskMeasure::autoSaveChanged(bool checked)
     QSettings settings;
     settings.beginGroup(QLatin1String(taskMeasureSettingsGroup));
     settings.setValue(QLatin1String(taskMeasureAutoSaveSettingsName), mAutoSave);
+    settings.endGroup();
 }
 
 void TaskMeasure::newMeasurementBehaviourChanged(bool checked)
@@ -555,6 +555,7 @@ void TaskMeasure::newMeasurementBehaviourChanged(bool checked)
         Gui::Selection().setSelectionStyle(SelectionStyle::GreedySelection);
         settings.setValue(QLatin1String(taskMeasureGreedySelection), true);
     }
+    settings.endGroup();
 }
 
 void TaskMeasure::setModeSilent(App::MeasureType* mode)

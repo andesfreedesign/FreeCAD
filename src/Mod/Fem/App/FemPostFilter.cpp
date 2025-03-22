@@ -91,8 +91,7 @@ DocumentObjectExecReturn* FemPostFilter::execute()
 vtkDataObject* FemPostFilter::getInputData()
 {
     if (Input.getValue()) {
-        if (Input.getValue()->getTypeId().isDerivedFrom(
-                Base::Type::fromName("Fem::FemPostObject"))) {
+        if (Input.getValue()->isDerivedFrom<Fem::FemPostObject>()) {
             return Input.getValue<FemPostObject*>()->Data.getValue();
         }
         else {
@@ -469,12 +468,9 @@ void FemPostClipFilter::onChanged(const Property* prop)
 {
     if (prop == &Function) {
 
-        if (Function.getValue()
-            && Function.getValue()->isDerivedFrom(FemPostFunction::getClassTypeId())) {
-            m_clipper->SetClipFunction(
-                static_cast<FemPostFunction*>(Function.getValue())->getImplicitFunction());
-            m_extractor->SetImplicitFunction(
-                static_cast<FemPostFunction*>(Function.getValue())->getImplicitFunction());
+        if (auto* value = Base::freecad_dynamic_cast<FemPostFunction>(Function.getValue())) {
+            m_clipper->SetClipFunction(value->getImplicitFunction());
+            m_extractor->SetImplicitFunction(value->getImplicitFunction());
         }
     }
     else if (prop == &InsideOut) {
@@ -830,8 +826,7 @@ void FemPostContoursFilter::refreshFields()
     Field.setValue(m_fields);
 
     // search if the current field is in the available ones and set it
-    std::vector<std::string>::iterator it =
-        std::find(FieldsArray.begin(), FieldsArray.end(), fieldName);
+    const auto it = std::ranges::find(FieldsArray, fieldName);
     if (!fieldName.empty() && it != FieldsArray.end()) {
         Field.setValue(fieldName.c_str());
     }
@@ -888,7 +883,7 @@ void FemPostContoursFilter::refreshVectors()
     VectorMode.setValue(m_vectors);
 
     // apply stored name
-    auto it = std::find(vectorArray.begin(), vectorArray.end(), vectorName);
+    const auto it = std::ranges::find(vectorArray, vectorName);
     if (!vectorName.empty() && it != vectorArray.end()) {
         VectorMode.setValue(vectorName.c_str());
     }
@@ -923,10 +918,8 @@ FemPostCutFilter::~FemPostCutFilter() = default;
 void FemPostCutFilter::onChanged(const Property* prop)
 {
     if (prop == &Function) {
-        if (Function.getValue()
-            && Function.getValue()->isDerivedFrom(FemPostFunction::getClassTypeId())) {
-            m_cutter->SetCutFunction(
-                static_cast<FemPostFunction*>(Function.getValue())->getImplicitFunction());
+        if (auto* value = Base::freecad_dynamic_cast<FemPostFunction>(Function.getValue())) {
+            m_cutter->SetCutFunction(value->getImplicitFunction());
         }
     }
 
@@ -1010,8 +1003,7 @@ DocumentObjectExecReturn* FemPostScalarClipFilter::execute()
     Scalars.setValue(m_scalarFields);
 
     // search if the current field is in the available ones and set it
-    std::vector<std::string>::iterator it =
-        std::find(ScalarsArray.begin(), ScalarsArray.end(), val);
+    const auto it = std::ranges::find(ScalarsArray, val);
     if (!val.empty() && it != ScalarsArray.end()) {
         Scalars.setValue(val.c_str());
     }
@@ -1129,7 +1121,7 @@ DocumentObjectExecReturn* FemPostWarpVectorFilter::execute()
     Vector.setValue(m_vectorFields);
 
     // search if the current field is in the available ones and set it
-    std::vector<std::string>::iterator it = std::find(VectorArray.begin(), VectorArray.end(), val);
+    const auto it = std::ranges::find(VectorArray, val);
     if (!val.empty() && it != VectorArray.end()) {
         Vector.setValue(val.c_str());
     }

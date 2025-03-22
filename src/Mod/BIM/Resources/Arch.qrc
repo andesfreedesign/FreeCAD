@@ -1,5 +1,6 @@
 <RCC>
     <qresource>
+        <file>geometry/HumanFigure.brep</file>
         <file>icons/Arch_3Views.svg</file>
         <file>icons/Arch_Add.svg</file>
         <file>icons/Arch_Axis.svg</file>
@@ -268,6 +269,7 @@
         <file>ui/preferences-dae.ui</file>
         <file>ui/preferences-ifc-export.ui</file>
         <file>ui/preferences-ifc.ui</file>
+        <file>ui/preferences-sh3d-import.ui</file>
         <file>ui/preferencesNativeIFC.ui</file>
     </qresource>
 </RCC>

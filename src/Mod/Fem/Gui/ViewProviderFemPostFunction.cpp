@@ -122,7 +122,7 @@ void ViewProviderFemPostFunctionProvider::updateSize()
 {
     std::vector<App::DocumentObject*> vec = claimChildren();
     for (auto it : vec) {
-        if (!it->isDerivedFrom(Fem::FemPostFunction::getClassTypeId())) {
+        if (!it->isDerivedFrom<Fem::FemPostFunction>()) {
             continue;
         }
 
@@ -333,7 +333,7 @@ bool ViewProviderFemPostFunction::setEdit(int ModNum)
             postDlg = nullptr;  // another pad left open its task panel
         }
         if (dlg && !postDlg) {
-            QMessageBox msgBox;
+            QMessageBox msgBox(Gui::getMainWindow());
             msgBox.setText(QObject::tr("A dialog is already open in the task panel"));
             msgBox.setInformativeText(QObject::tr("Do you want to close this dialog?"));
             msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);

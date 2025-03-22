@@ -569,6 +569,9 @@ class Joint:
         if App.isRestoring():
             return
 
+        if prop == "Reference1" or prop == "Reference2":
+            joint.recompute()
+
         if prop == "Offset1" or prop == "Offset2":
             if joint.Reference1 is None or joint.Reference2 is None:
                 return
@@ -591,10 +594,21 @@ class Joint:
                 self.preventParallel(joint)
             solveIfAllowed(self.getAssembly(joint))
 
-    def execute(self, fp):
-        """Do something when doing a recomputation, this method is mandatory"""
-        # App.Console.PrintMessage("Recompute Python Box feature\n")
-        pass
+    def execute(self, joint):
+        errStr = joint.Label + ": " + QT_TRANSLATE_NOOP("Assembly", "Broken link in: ")
+        if (
+            hasattr(joint, "Reference1")
+            and joint.Reference1 is not None
+            and (joint.Reference1[1][0].find("?") != -1)
+        ):
+            raise Exception(errStr + "Reference1")
+
+        if (
+            hasattr(joint, "Reference2")
+            and joint.Reference2 is not None
+            and (joint.Reference2[1][0].find("?") != -1)
+        ):
+            raise Exception(errStr + "Reference2")
 
     def setJointConnectors(self, joint, refs):
         # current selection is a vector of strings like "Assembly.Assembly1.Assembly2.Body.Pad.Edge16" including both what selection return as obj_name and obj_sub
@@ -706,31 +720,10 @@ class Joint:
             part2Connected = assembly.isPartConnected(part2)
             joint.Activated = True
         else:
-            part1Connected = False
-            part2Connected = True
+            part1Connected = True
+            part2Connected = False
 
-        if not part2Connected:
-            if savePlc:
-                self.partMovedByPresolved = part2
-                self.presolveBackupPlc = part2.Placement
-
-            globalJcsPlc1 = UtilsAssembly.getJcsGlobalPlc(joint.Placement1, joint.Reference1)
-            jcsPlc2 = UtilsAssembly.getJcsPlcRelativeToPart(
-                assembly, joint.Placement2, joint.Reference2
-            )
-            if not sameDir:
-                jcsPlc2 = UtilsAssembly.flipPlacement(jcsPlc2)
-
-            # For link groups and sub-assemblies we have to take into account
-            # the parent placement (ie the linkgroup plc) as the linkgroup is not the moving part
-            # But instead of doing as follow, we rather enforce identity placement for linkgroups.
-            # parentPlc = UtilsAssembly.getParentPlacementIfNeeded(part2)
-            # part2.Placement = globalJcsPlc1 * jcsPlc2.inverse() * parentPlc.inverse()
-
-            part2.Placement = globalJcsPlc1 * jcsPlc2.inverse()
-            return True
-
-        elif not part1Connected:
+        if not part1Connected:
             if savePlc:
                 self.partMovedByPresolved = part1
                 self.presolveBackupPlc = part1.Placement
@@ -742,7 +735,28 @@ class Joint:
             if not sameDir:
                 jcsPlc1 = UtilsAssembly.flipPlacement(jcsPlc1)
 
+            # For link groups and sub-assemblies we have to take into account
+            # the parent placement (ie the linkgroup plc) as the linkgroup is not the moving part
+            # But instead of doing as follow, we rather enforce identity placement for linkgroups.
+            # parentPlc = UtilsAssembly.getParentPlacementIfNeeded(part2)
+            # part2.Placement = globalJcsPlc1 * jcsPlc2.inverse() * parentPlc.inverse()
+
             part1.Placement = globalJcsPlc2 * jcsPlc1.inverse()
+            return True
+
+        elif not part2Connected:
+            if savePlc:
+                self.partMovedByPresolved = part2
+                self.presolveBackupPlc = part2.Placement
+
+            globalJcsPlc1 = UtilsAssembly.getJcsGlobalPlc(joint.Placement1, joint.Reference1)
+            jcsPlc2 = UtilsAssembly.getJcsPlcRelativeToPart(
+                assembly, joint.Placement2, joint.Reference2
+            )
+            if not sameDir:
+                jcsPlc2 = UtilsAssembly.flipPlacement(jcsPlc2)
+
+            part2.Placement = globalJcsPlc1 * jcsPlc2.inverse()
             return True
         return False
 

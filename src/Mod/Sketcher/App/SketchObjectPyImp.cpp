@@ -765,8 +765,8 @@ PyObject* SketchObjectPy::setDatum(PyObject* args)
             str << "Cannot set the datum because the sketch contains conflicting constraints";
         }
         else if (err == -2) {
-            str << "Datum " << (const char*)Quantity.getUserString().toUtf8()
-                << " for the constraint with index " << Index << " is invalid";
+            str << "Datum " << Quantity.getUserString() << " for the constraint with index "
+                << Index << " is invalid";
         }
         else if (err == -4) {
             str << "Negative datum values are not valid for the constraint with index " << Index;
@@ -778,8 +778,7 @@ PyObject* SketchObjectPy::setDatum(PyObject* args)
             str << "Cannot set the datum because of invalid geometry";
         }
         else {
-            str << "Unexpected problem at setting datum "
-                << (const char*)Quantity.getUserString().toUtf8()
+            str << "Unexpected problem at setting datum " << Quantity.getUserString()
                 << " for the constraint with index " << Index;
         }
         PyErr_SetString(PyExc_ValueError, str.str().c_str());
@@ -2463,7 +2462,7 @@ Py::List SketchObjectPy::getConflictingConstraints() const
     Py::List conflicting;
 
     for (auto cid : conflictinglist) {
-        conflicting.append(Py::Int(cid));
+        conflicting.append(Py::Long(cid));
     }
 
     return conflicting;
@@ -2476,7 +2475,7 @@ Py::List SketchObjectPy::getRedundantConstraints() const
     Py::List redundant;
 
     for (auto cid : redundantlist) {
-        redundant.append(Py::Int(cid));
+        redundant.append(Py::Long(cid));
     }
 
     return redundant;
@@ -2489,7 +2488,7 @@ Py::List SketchObjectPy::getPartiallyRedundantConstraints() const
     Py::List redundant;
 
     for (auto cid : redundantlist) {
-        redundant.append(Py::Int(cid));
+        redundant.append(Py::Long(cid));
     }
 
     return redundant;
@@ -2502,7 +2501,7 @@ Py::List SketchObjectPy::getMalformedConstraints() const
     Py::List malformed;
 
     for (auto cid : malformedlist) {
-        malformed.append(Py::Int(cid));
+        malformed.append(Py::Long(cid));
     }
 
     return malformed;

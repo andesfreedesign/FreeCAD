@@ -71,7 +71,7 @@ bool Property::hasName() const
 
 bool Property::isValidName(const char* name)
 {
-    return name && name[0] != '\0';
+    return !Base::Tools::isNullOrEmpty(name);
 }
 
 std::string Property::getFullName() const
@@ -213,6 +213,7 @@ struct PropertyCleaner
             auto p = _RemovedProps.back();
             _RemovedProps.pop_back();
             if (p != prop) {
+                p->setContainer(nullptr);
                 delete p;
             }
             else {

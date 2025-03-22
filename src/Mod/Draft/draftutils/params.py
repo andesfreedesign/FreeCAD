@@ -388,9 +388,12 @@ def _get_param_dictionary():
         "DefaultDisplayMode":          ("int",       0),
         "DefaultDrawStyle":            ("int",       0),
         "DefaultPrintColor":           ("unsigned",  255),
+        "DimAutoFlipText":             ("bool",      True),
         "Draft_array_fuse":            ("bool",      False),
         "Draft_array_Link":            ("bool",      True),
-        "fillmode":                    ("bool",      True),
+        "FilletRadius":                ("float",     100.0),
+        "FilletChamferMode":           ("bool",      False),
+        "FilletDeleteMode":            ("bool",      False),
         "GlobalMode":                  ("bool",      False),
         "GridHideInOtherWorkbenches":  ("bool",      True),
         "HatchPatternFile":            ("string",    hatch_pattern_file),
@@ -401,6 +404,7 @@ def _get_param_dictionary():
         "labeltype":                   ("string",    "Custom"),
         "LayersManagerHeight":         ("int",       320),
         "LayersManagerWidth":          ("int",       640),
+        "MakeFaceMode":                ("bool",      True),
         "maxSnapEdges":                ("int",       0),
         "OffsetCopyMode":              ("bool",      False),
         "Offset_OCC":                  ("bool",      False),
@@ -538,7 +542,8 @@ def _get_param_dictionary():
                 ":/ui/preferences-archdefaults.ui",
                 ":/ui/preferences-dae.ui",
                 ":/ui/preferences-ifc.ui",
-                ":/ui/preferences-ifc-export.ui"):
+                ":/ui/preferences-ifc-export.ui",
+                ":/ui/preferences-sh3d-import.ui",):
 
         # https://stackoverflow.com/questions/14750997/load-txt-file-from-resources-in-python
         fd = QtCore.QFile(fnm)

@@ -47,6 +47,7 @@
 #include <Mod/Part/App/PrimitiveFeature.h>
 #include <Mod/Part/App/FeaturePartCircle.h>
 #include <Mod/Part/App/TopoShapePy.h>
+#include <Mod/Measure/App/ShapeFinder.h>
 //#include <Mod/Sketcher/App/SketchObject.h>
 
 #include "ShapeExtractor.h"
@@ -55,6 +56,7 @@
 #include "Preferences.h"
 
 using namespace TechDraw;
+using namespace Measure;
 using DU = DrawUtil;
 using SU = ShapeUtils;
 
@@ -67,7 +69,7 @@ std::vector<TopoDS_Shape> ShapeExtractor::getShapes2d(const std::vector<App::Doc
 
     for (auto& l:links) {
         if (is2dObject(l)) {
-            if (l->getTypeId().isDerivedFrom(Part::Feature::getClassTypeId())) {
+            if (l->isDerivedFrom<Part::Feature>()) {
                 TopoDS_Shape temp = getLocatedShape(l);
                 // checkShape on 2d objs?
                 if (!temp.IsNull()) {
@@ -116,7 +118,7 @@ TopoDS_Shape ShapeExtractor::getShapes(const std::vector<App::DocumentObject*> l
             }
 
             for (auto* inObj : l->getInList()) {
-                if (inObj->isDerivedFrom(App::Part::getClassTypeId())) {
+                if (inObj->isDerivedFrom<App::Part>()) {
                     // we replace obj by the assembly
                     obj = inObj;
                     break;
@@ -166,7 +168,7 @@ TopoDS_Shape ShapeExtractor::getShapes(const std::vector<App::DocumentObject*> l
             continue;
         } else if (s.ShapeType() < TopAbs_SOLID) {
             //clean up composite shapes
-            TopoDS_Shape cleanShape = stripInfiniteShapes(s);
+            TopoDS_Shape cleanShape = ShapeFinder::ShapeFinder::stripInfiniteShapes(s);
             if (!cleanShape.IsNull()) {
                 builder.Add(comp, cleanShape);
             }
@@ -226,7 +228,7 @@ std::vector<TopoDS_Shape> ShapeExtractor::getXShapes(const App::Link* xLink)
             auto shape = Part::Feature::getShape(l);    // TODO:  getTopoShape() ?
             Part::TopoShape ts(shape);
             if (ts.isInfinite()) {
-                shape = stripInfiniteShapes(shape);
+                shape = ShapeFinder::stripInfiniteShapes(shape);
             }
             if (!checkShape(l, shape)) {
                 continue;
@@ -285,7 +287,7 @@ TopoDS_Shape ShapeExtractor::getShapeFromXLink(const App::Link* xLink)
         }
         Part::TopoShape ts(shape);
         if (ts.isInfinite()) {
-            shape = stripInfiniteShapes(shape);
+            shape = ShapeFinder::stripInfiniteShapes(shape);
             ts = Part::TopoShape(shape);
         }
         //ts might be garbage now, better check
@@ -379,30 +381,6 @@ TopoDS_Shape ShapeExtractor::getShapesFused(const std::vector<App::DocumentObjec
     return baseShape;
 }
 
-//inShape is a compound
-//The shapes of datum features (Axis, Plan and CS) are infinite
-//Infinite shapes can not be projected, so they need to be removed.
-TopoDS_Shape ShapeExtractor::stripInfiniteShapes(TopoDS_Shape inShape)
-{
-    BRep_Builder builder;
-    TopoDS_Compound comp;
-    builder.MakeCompound(comp);
-
-    TopoDS_Iterator it(inShape);
-    for (; it.More(); it.Next()) {
-        TopoDS_Shape s = it.Value();
-        if (s.ShapeType() < TopAbs_SOLID) {
-            //look inside composite shapes
-            s = stripInfiniteShapes(s);
-        } else if (Part::TopoShape(s).isInfinite()) {
-            continue;
-        } else {
-            //simple shape
-        }
-        builder.Add(comp, s);
-    }
-    return TopoDS_Shape(std::move(comp));
-}
 
 bool ShapeExtractor::is2dObject(const App::DocumentObject* obj)
 {
@@ -420,31 +398,20 @@ bool ShapeExtractor::is2dObject(const App::DocumentObject* obj)
 bool ShapeExtractor::isEdgeType(const App::DocumentObject* obj)
 {
     Base::Type t = obj->getTypeId();
-    if (t.isDerivedFrom(Part::Line::getClassTypeId()) ) {
-        return true;
-    } else if (t.isDerivedFrom(Part::Circle::getClassTypeId())) {
-        return true;
-    } else if (t.isDerivedFrom(Part::Ellipse::getClassTypeId())) {
-        return true;
-    } else if (t.isDerivedFrom(Part::RegularPolygon::getClassTypeId())) {
-        return true;
-    }
-    return false;
+    return t.isDerivedFrom(Part::Line::getClassTypeId())
+           || t.isDerivedFrom(Part::Circle::getClassTypeId())
+           || t.isDerivedFrom(Part::Ellipse::getClassTypeId())
+           || t.isDerivedFrom(Part::RegularPolygon::getClassTypeId());
 }
 
 bool ShapeExtractor::isPointType(const App::DocumentObject* obj)
 {
-    if (obj) {
-        Base::Type t = obj->getTypeId();
-        if (t.isDerivedFrom(Part::Vertex::getClassTypeId())) {
-            return true;
-        } else if (isDraftPoint(obj)) {
-            return true;
-        } else if (isDatumPoint(obj)) {
-            return true;
-        }
+    if (!obj) {
+        return false;
     }
-    return false;
+    return obj->isDerivedFrom<Part::Vertex>()
+           || isDraftPoint(obj)
+           || isDatumPoint(obj);
 }
 
 bool ShapeExtractor::isDraftPoint(const App::DocumentObject* obj)
@@ -508,17 +475,8 @@ TopoDS_Shape ShapeExtractor::getLocatedShape(const App::DocumentObject* docObj)
 
 bool ShapeExtractor::isSketchObject(const App::DocumentObject* obj)
 {
-// TODO:: the check for an object being a sketch should be done as in the commented
-// if statement below. To do this, we need to include Mod/Sketcher/SketchObject.h,
-// but that makes TechDraw dependent on Eigen libraries which we don't use.  As a
-// workaround we will inspect the object's class name.
-//    if (obj->isDerivedFrom(Sketcher::SketchObject::getClassTypeId())) {
-    std::string objTypeName = obj->getTypeId().getName();
-    std::string sketcherToken("Sketcher");
-    if (objTypeName.find(sketcherToken) != std::string::npos) {
-        return true;
-    }
-    return false;
+    // Use name to lookup to avoid dependency on Sketcher module
+    return obj->isDerivedFrom(Base::Type::fromName("Sketcher::SketchObject"));
 }
 
 

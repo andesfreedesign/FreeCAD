@@ -30,7 +30,7 @@
 
 #include <App/Document.h>
 #include <Gui/Command.h>
-#include <Gui/SelectionObject.h>
+#include <Gui/Selection/SelectionObject.h>
 #include <Mod/Fem/App/FemConstraintRigidBody.h>
 #include <Mod/Part/App/PartFeature.h>
 
@@ -116,7 +116,7 @@ TaskFemConstraintRigidBody::TaskFemConstraintRigidBody(
     Base::Vector3d rotDir;
     double rotAngleRad;
     pcConstraint->Rotation.getValue().getValue(rotDir, rotAngleRad);
-    Base::Quantity rotAngle(rotAngleRad, QString::fromUtf8("rad"));
+    Base::Quantity rotAngle(rotAngleRad, "rad");
     Base::Quantity forceX = pcConstraint->ForceX.getQuantityValue();
     Base::Quantity forceY = pcConstraint->ForceY.getQuantityValue();
     Base::Quantity forceZ = pcConstraint->ForceZ.getQuantityValue();
@@ -289,8 +289,7 @@ void TaskFemConstraintRigidBody::addToSelection()
         for (size_t subIt = 0; subIt < (subNames.size());
              ++subIt) {  // for every selected sub element
             bool addMe = true;
-            for (std::vector<std::string>::iterator itr =
-                     std::find(SubElements.begin(), SubElements.end(), subNames[subIt]);
+            for (auto itr = std::ranges::find(SubElements, subNames[subIt]);
                  itr != SubElements.end();
                  itr = std::find(++itr,
                                  SubElements.end(),
@@ -361,8 +360,7 @@ void TaskFemConstraintRigidBody::removeFromSelection()
 
         for (size_t subIt = 0; subIt < (subNames.size());
              ++subIt) {  // for every selected sub element
-            for (std::vector<std::string>::iterator itr =
-                     std::find(SubElements.begin(), SubElements.end(), subNames[subIt]);
+            for (auto itr = std::ranges::find(SubElements, subNames[subIt]);
                  itr != SubElements.end();
                  itr = std::find(++itr,
                                  SubElements.end(),
@@ -581,18 +579,18 @@ Base::Rotation TaskFemConstraintRigidBody::getRotation() const
 
 std::vector<std::string> TaskFemConstraintRigidBody::getForce() const
 {
-    std::string x = ui->qsb_force_x->value().getSafeUserString().toStdString();
-    std::string y = ui->qsb_force_y->value().getSafeUserString().toStdString();
-    std::string z = ui->qsb_force_z->value().getSafeUserString().toStdString();
+    std::string x = ui->qsb_force_x->value().getSafeUserString();
+    std::string y = ui->qsb_force_y->value().getSafeUserString();
+    std::string z = ui->qsb_force_z->value().getSafeUserString();
 
     return {x, y, z};
 }
 
 std::vector<std::string> TaskFemConstraintRigidBody::getMoment() const
 {
-    std::string x = ui->qsb_moment_x->value().getSafeUserString().toStdString();
-    std::string y = ui->qsb_moment_y->value().getSafeUserString().toStdString();
-    std::string z = ui->qsb_moment_z->value().getSafeUserString().toStdString();
+    std::string x = ui->qsb_moment_x->value().getSafeUserString();
+    std::string y = ui->qsb_moment_y->value().getSafeUserString();
+    std::string z = ui->qsb_moment_z->value().getSafeUserString();
 
     return std::vector<std::string>({x, y, z});
 }
