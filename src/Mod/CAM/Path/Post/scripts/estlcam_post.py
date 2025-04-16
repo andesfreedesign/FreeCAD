@@ -179,9 +179,9 @@ def processArguments(argstring):
             SHOW_EDITOR = False
         PRECISION = args.precision
         if args.preamble is not None:
-            PREAMBLE = args.preamble
+            PREAMBLE = args.preamble.replace("\\n", "\n")
         if args.postamble is not None:
-            POSTAMBLE = args.postamble
+            POSTAMBLE = args.postamble.replace("\\n", "\n")
         if args.inches:
             UNITS = "G20"
             UNIT_SPEED_FORMAT = "in/min"
@@ -327,10 +327,11 @@ def export(objectslist, filename, argstring):
 
     print("Done postprocessing.")
 
-    # write the file
-    gfile = pyopen(filename, "w")
-    gfile.write(final)
-    gfile.close()
+    if filename != "-":
+        with pyopen(filename, "w") as gfile:
+            gfile.write(final)
+
+    return final
 
 
 def linenumber():

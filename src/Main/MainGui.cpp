@@ -179,9 +179,6 @@ int main(int argc, char** argv)
         }
         argv_.push_back(0);  // 0-terminated string
     }
-
-    // https://www.qt.io/blog/dark-mode-on-windows-11-with-qt-6.5
-    _putenv("QT_QPA_PLATFORM=windows:darkmode=1");
 #endif
 
     // Name and Version of the Application
@@ -266,7 +263,7 @@ int main(int argc, char** argv)
                           "Python version information:\n%4\n")
                   .arg(appName,
                        QString::fromUtf8(e.what()),
-                       QString::fromUtf8(Py_EncodeLocale(Py_GetPath(), nullptr)),
+                       QString::fromStdString(Base::Interpreter().getPythonPath()),
                        QString::fromLatin1(Py_GetVersion()));
         const char* pythonhome = getenv("PYTHONHOME");
         if (pythonhome) {
